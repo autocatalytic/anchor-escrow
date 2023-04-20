@@ -20,6 +20,7 @@ import {
 import { assert } from "chai";
 
 describe("anchor-escrow", () => {
+
   // Use Mainnet-fork for testing
   const commitment: Commitment = "processed"; // processed, confirmed, finalized
   const connection = new Connection("http://localhost:8899", {
@@ -39,7 +40,7 @@ describe("anchor-escrow", () => {
 
   // CAUTION: if you are intended to use the program that is deployed by yourself,
   // please make sure that the programIDs are consistent
-  const programId = new PublicKey("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+  const programId = new PublicKey("CZqii7Xi2WqsWci4WhB7hT7Dgbr3FyHZy8yVJ4Z81FiS");
   const program = new anchor.Program(IDL, programId, provider);
 
   let mintA = null as PublicKey;
@@ -77,7 +78,7 @@ describe("anchor-escrow", () => {
   )[0];
   let vaultKey = null as PublicKey;
 
-  it("Initialize program state", async () => {
+  it("Initialize program state, including dummy tokens", async () => {
     // 1. Airdrop 1 SOL to payer
     const signature = await provider.connection.requestAirdrop(payer.publicKey, 1000000000);
     const latestBlockhash = await connection.getLatestBlockhash();
@@ -161,6 +162,8 @@ describe("anchor-escrow", () => {
 
     let fetchedVault = await getAccount(connection, vaultKey);
     let fetchedEscrowState = await program.account.escrowState.fetch(escrowStateKey);
+
+    console.log('fetchedVault: ', fetchedVault.owner);
 
     // Check that the new owner is the PDA.
     assert.ok(fetchedVault.owner.equals(vaultAuthorityKey));

@@ -2,7 +2,23 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, CloseAccount, Mint, Token, TokenAccount, TransferChecked};
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("CZqii7Xi2WqsWci4WhB7hT7Dgbr3FyHZy8yVJ4Z81FiS");
+
+#[warn(unused_doc_comments)]
+/** Program Architecture
+ * 
+ * There are three main parts of the program: Processor, Instructions, & Account
+ * 
+ * Processor: Main business logic located in processor
+ * 
+ * Instructions (Account Context): Instruction data packing/unpacking, and 
+ * account constraints and access control locate in Instruction handling part.
+ * 
+ * Accounts: Declaration of accounts owned by program locates in account part.
+ * 
+ */
+
+// Processor
 
 #[program]
 pub mod anchor_escrow {
@@ -28,7 +44,7 @@ pub mod anchor_escrow {
             .to_account_info()
             .key;
         ctx.accounts.escrow_state.initializer_amount = initializer_amount;
-        ctx.accounts.escrow_state.taker_amount = taker_amount;
+        ctx.accounts.escrow_state.taker_amount = taker_amount; // for exchange, later
         ctx.accounts.escrow_state.random_seed = random_seed;
 
         let (_vault_authority, vault_authority_bump) =
@@ -97,10 +113,34 @@ pub mod anchor_escrow {
     }
 }
 
+// Instructions - should bring in the accounts needed for operations
+//
+    /// Starts by creating and populating an escrow account and transferring 
+    /// ownership of the given temp token account to the PDA
+    ///
+    ///
+    /// Accounts expected:
+    ///
+    /// 0. `[initializer]` The account of the person initializing the escrow
+    /// 1. `[mint]` Token account for tokens deposited to escrow
+    /// 2. `[vault_authority] 
+    /// 
+    /// ToDo - fill in the rest based on Vault architecture below
+    /// describes the original paulx, non-anchor, pure transfer system
+    /// 
+    /// 
+    /// 1. `[writable]` Temporary token account that should be created prior to this instruction and owned by the initializer
+    /// 2. `[]` The initializer's token account for the token they will receive should the trade go through
+    /// 3. `[writable]` The escrow account, it will hold all necessary info about the trade.
+    /// 4. `[]` The rent sysvar
+    /// 
+    /// ToDo - this one holds true still?
+    /// 5. `[token_program]` The token program itself, used by Processor
+//
 #[derive(Accounts)]
 #[instruction(escrow_seed: u64, initializer_amount: u64)]
 pub struct Initialize<'info> {
-    /// CHECK: This is not dangerous because we don't read or write from this account
+    /// CHECK: This is not dangerous because we control who signs
     #[account(mut)]
     pub initializer: Signer<'info>,
     pub mint: Account<'info, Mint>,
@@ -140,6 +180,20 @@ pub struct Initialize<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
+
+
+// Accounts, aka Program Accounts, required for building the escrow and vault
+
+#[account]
+pub struct EscrowAccount {
+    pub initializer_key: Pubkey,              // Authorize the actions properly
+    pub initializer_deposit_token_account: Pubkey,  // Record the deposit account of initializer
+    pub initializer_receive_token_account: Pubkey,  // Record the receiving account of initializer
+    pub initializer_amount: u64,              // Record amt tokens I. transfers to R.
+    pub taker_amount: u64,                    // Record amt tokens R receives from I.
+}
+
+
 #[derive(Accounts)]
 pub struct Cancel<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
@@ -166,6 +220,7 @@ pub struct Cancel<'info> {
     /// CHECK: This is not dangerous because we don't read or write from this account
     pub token_program: Program<'info, Token>,
 }
+
 
 #[derive(Accounts)]
 pub struct Exchange<'info> {
@@ -221,6 +276,8 @@ impl EscrowState {
         8 + 121
     }
 }
+
+// Utils -- some functions used for wrapping and passing data.
 
 impl<'info> Initialize<'info> {
     fn into_transfer_to_pda_context(
