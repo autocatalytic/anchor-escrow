@@ -1,3 +1,7 @@
+Awesome code-along example based on Paulx's original in Rust
+Definitely read the original architecture, with diagrams too.
+
+
 # Anchor Example: Escrow Program
 
 > See this [doc](https://solmeet.gen3.network/notes/intro-to-anchor) for more implementation details
